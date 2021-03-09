@@ -1,8 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
 #include "mpi.h"
-#include <string.h>
+#include <string>
 
 static void star(int M, char* mes) {
 	int ProcNum, ProcRank;
@@ -34,7 +33,7 @@ static void star(int M, char* mes) {
 			printf("\n%d. Receive %s to %d proc from 0 proc", im, RecvRank, ProcRank);
 
 			//send answer to 0 proc
-			MPI_Send(&RecvRank, sizeof(RecvRank), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+			MPI_Send(&RecvRank, sizeof(mes), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 			printf("\n%d. Send %s from %d proc to 0 proc", im, mes, ProcRank);
 		}
 	}
@@ -43,9 +42,23 @@ static void star(int M, char* mes) {
 
 int main(int argc, char* argv[])
 {
-
 	MPI_Init(&argc, &argv);
-	star(atoi(argv[1]), (char*)"\"it is message\"");
+
+	int procRank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &procRank);
+
+	int M = 2;
+	char* mes = (char*)"\'this is a message\'";
+		
+	if (procRank == 0)
+	{		
+		star(M, mes);
+	}
+	else {
+		star(M, (char*)"");
+	}
+
+	
 	MPI_Finalize();
 	return 0;
 }
