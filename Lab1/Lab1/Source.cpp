@@ -5,38 +5,45 @@
 
 static void star(int M) {
 	int ProcNum, ProcRank;
-	int RecvRank;
+	int* RecvRank = new int[1];
+	int TotalRank;
+	int MaxRank;
+	int MinRank;
 	MPI_Status Status;
 	MPI_Comm_size(MPI_COMM_WORLD, &ProcNum);
 	MPI_Comm_rank(MPI_COMM_WORLD, &ProcRank);
-
+	if (ProcRank == 0) {
+		*RecvRank = 0;
+	}
+	else {
+		*RecvRank = -1;
+	}
 	for (int im = 0; im < M; im++) {
+		MPI_Bcast(RecvRank, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
 		if (ProcRank == 0)
 		{
-			//send messege to any other procs
-			for (int i = 1; i < ProcNum; i++)
-			{
-				//mes += "from 0 proc";
-				MPI_Send(&ProcRank, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-				printf("\n%d. Send \'%d\' from %d proc to any procs", im, ProcRank, ProcRank);
-			}
-
-			//receive answer from any other procs
-			for (int i = 1; i < ProcNum; i++)
-			{
-				MPI_Recv(&RecvRank, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &Status);
-				printf("\n%d. Receive \'%d\' to %d proc from any procs", im, RecvRank, ProcRank);
-			}
+			printf("\n%d. Send \'%d\' from %d proc to any procs", im, *RecvRank, ProcRank);
 		}
 		else {
-			//receive message from 0 proc
-			MPI_Recv(&RecvRank, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &Status);
-			printf("\n%d. Receive \'%d\' to %d proc from 0 proc", im, RecvRank, ProcRank);
-
-			//send answer to 0 proc
-			MPI_Send(&ProcRank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+			printf("\n%d. Receive \'%d\' to %d proc from 0 proc", im, *RecvRank, ProcRank);
 			printf("\n%d. Send \'%d\' from %d proc to 0 proc", im, ProcRank, ProcRank);
+
 		}
+
+		MPI_Reduce(&ProcRank, &TotalRank, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+		MPI_Reduce(&ProcRank, &MaxRank, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+		MPI_Reduce(&ProcRank, &MinRank, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+		
+
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (ProcRank == 0)
+		{
+			printf("\n%d. Receive \'%d\' (total sum) to %d proc from any procs", im, TotalRank, ProcRank);
+			printf("\n%d. Receive \'%d\' (max rank) to %d proc from any procs", im, MaxRank, ProcRank);
+			printf("\n%d. Receive \'%d\' (min rank) to %d proc from any procs", im, MinRank, ProcRank);
+		}
+		
 	}
 
 }
