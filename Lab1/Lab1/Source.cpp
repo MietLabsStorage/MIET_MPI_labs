@@ -3,47 +3,39 @@
 #include "mpi.h"
 #include <string>
 
+static void showArr(int* arr, int N) {
+	for (int i = 0; i < N; i++) {
+		printf("%d ", arr[i]);
+	}
+	printf("\n");
+}
+
 static void star(int M) {
 	int ProcNum, ProcRank;
-	int* RecvRank = new int[1];
-	int TotalRank;
-	int MaxRank;
-	int MinRank;
 	MPI_Status Status;
 	MPI_Comm_size(MPI_COMM_WORLD, &ProcNum);
 	MPI_Comm_rank(MPI_COMM_WORLD, &ProcRank);
+
+	int* sendFrom0 = new int[ProcNum];
 	if (ProcRank == 0) {
-		*RecvRank = 0;
+		for (int i = 0; i < ProcNum; i++) {
+			sendFrom0[i] = 1;
+		}
 	}
-	else {
-		*RecvRank = -1;
-	}
-	for (int im = 0; im < M; im++) {
-		MPI_Bcast(RecvRank, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	int* getFrom0 = new int[1]{ -1 };
 
-		if (ProcRank == 0)
-		{
-			printf("\n%d. Send \'%d\' from %d proc to any procs", im, *RecvRank, ProcRank);
+	for (int i = 0; i < M; i++) {
+		//send to any procs
+		MPI_Scatter(sendFrom0, 1, MPI_INT, getFrom0, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		printf("%d. Get from 0 proc mes=\'%d\' to %d proc\n", i, *getFrom0, ProcRank);
+		//multiply
+		*getFrom0 = (*getFrom0) * ProcRank;
+		//send to 0 proc for printing
+		MPI_Gather(getFrom0, 1, MPI_INT, sendFrom0, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		if (ProcRank == 0) {
+			printf("%d. Num pows: ", i);
+			showArr(sendFrom0, ProcNum);
 		}
-		else {
-			printf("\n%d. Receive \'%d\' to %d proc from 0 proc", im, *RecvRank, ProcRank);
-			printf("\n%d. Send \'%d\' from %d proc to 0 proc", im, ProcRank, ProcRank);
-
-		}
-
-		MPI_Reduce(&ProcRank, &TotalRank, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-		MPI_Reduce(&ProcRank, &MaxRank, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
-		MPI_Reduce(&ProcRank, &MinRank, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
-		
-
-		MPI_Barrier(MPI_COMM_WORLD);
-		if (ProcRank == 0)
-		{
-			printf("\n%d. Receive \'%d\' (total sum) to %d proc from any procs", im, TotalRank, ProcRank);
-			printf("\n%d. Receive \'%d\' (max rank) to %d proc from any procs", im, MaxRank, ProcRank);
-			printf("\n%d. Receive \'%d\' (min rank) to %d proc from any procs", im, MinRank, ProcRank);
-		}
-		
 	}
 
 }
@@ -52,12 +44,8 @@ int main(int argc, char* argv[])
 {
 	MPI_Init(&argc, &argv);
 
-	int procRank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &procRank);
-
-	int M = 1;
+	int M = 4;
 	star(M);
-
 	
 	MPI_Finalize();
 	return 0;
