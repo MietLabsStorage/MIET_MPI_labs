@@ -1,6 +1,7 @@
 #include <iostream>
 
-const int CIRCLE = 7;
+const int CIRCLE1 = 2;
+const int CIRCLE2 = 3;
 const int SIZE = 8;
 const int EXIT_SIZE = 4;
 
@@ -10,6 +11,17 @@ struct ComplexMatrix
 	int** imaginary;
 	int size;
 };
+
+void printMatrix(ComplexMatrix cm) {
+	for (int i = 0; i < cm.size; i++)
+	{
+		for (int j = 0; j < cm.size; j++)
+		{
+			printf("%d+%di ", cm.real[i][j], cm.imaginary[i][j]);
+		}
+		printf("\n");
+	}
+}
 
 ComplexMatrix Sum(ComplexMatrix cm1, ComplexMatrix cm2)
 {
@@ -90,6 +102,7 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 				}
 			}
 		}
+		return ans;
 	}
 	else 
 	{
@@ -125,7 +138,9 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 			}
 		}
 
-		ComplexMatrix p1 = Multiply(Sum(a[0][0], a[1][1]), Sum(b[0][0], a[0][0]));
+		ComplexMatrix s1 = Sum(a[0][0], a[1][1]);
+		ComplexMatrix s2 = Sum(b[0][0], b[1][1]);
+		ComplexMatrix p1 = Multiply(s1, s2);
 		ComplexMatrix p2 = Multiply(Sum(a[1][0], a[1][1]), b[0][0]);
 		ComplexMatrix p3 = Multiply(a[0][0], Substract(b[0][1], b[1][1]));
 		ComplexMatrix p4 = Multiply(a[1][1], Substract(b[1][0], b[0][0]));
@@ -156,17 +171,6 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 	
 };
 
-void printMatrix(ComplexMatrix cm) {
-	for (int i = 0; i < cm.size; i++)
-	{
-		for (int j = 0; j < cm.size; j++)
-		{
-			printf("%d+%di ", cm.real[i][j], cm.imaginary[i][j]);
-		}
-		printf("\n");
-	}
-}
-
 int main() 
 {
 	ComplexMatrix complexMatrix;
@@ -182,8 +186,8 @@ int main()
 	{
 		for (int j = 0; j < complexMatrix.size; j++)
 		{
-			complexMatrix.real[i][j] = i % 7 + j % 5;
-			complexMatrix.imaginary[i][j] = i % 5 + j % 7;
+			complexMatrix.real[i][j] = i % CIRCLE1 + j % CIRCLE2;
+			complexMatrix.imaginary[i][j] = i % CIRCLE2 + j % CIRCLE1;
 		}
 	}
 
