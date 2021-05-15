@@ -2,7 +2,7 @@
 
 const int CIRCLE1 = 2;
 const int CIRCLE2 = 3;
-const int SIZE = 8;
+const int SIZE = 16;
 const int EXIT_SIZE = 4;
 
 struct ComplexMatrix
@@ -38,11 +38,9 @@ ComplexMatrix Sum(ComplexMatrix cm1, ComplexMatrix cm2)
 	{
 		for (int j = 0; j < ans.size; j++)
 		{
-			for (int r = 0; r < ans.size; r++)
-			{
-				ans.real[i][j] = cm1.real[i][r] + cm2.real[r][j];
-				ans.imaginary[i][j] = cm1.imaginary[i][r] + cm2.imaginary[r][j];
-			}
+
+			ans.real[i][j] = cm1.real[i][j] + cm2.real[i][j];
+			ans.imaginary[i][j] = cm1.imaginary[i][j] + cm2.imaginary[i][j];
 		}
 	}
 
@@ -64,11 +62,9 @@ ComplexMatrix Substract(ComplexMatrix cm1, ComplexMatrix cm2)
 	{
 		for (int j = 0; j < ans.size; j++)
 		{
-			for (int r = 0; r < ans.size; r++)
-			{
-				ans.real[i][j] = cm1.real[i][r] - cm2.real[r][j];
-				ans.imaginary[i][j] = cm1.imaginary[i][r] - cm2.imaginary[r][j];
-			}
+
+			ans.real[i][j] = cm1.real[i][j] - cm2.real[i][j];
+			ans.imaginary[i][j] = cm1.imaginary[i][j] - cm2.imaginary[i][j];
 		}
 	}
 
@@ -84,10 +80,14 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 	for (int i = 0; i < ans.size; i++) {
 		ans.real[i] = new int[ans.size];
 		ans.imaginary[i] = new int[ans.size];
+		for (int j = 0; j < ans.size; j++)
+		{
+			ans.real[i][j] = 0;
+			ans.imaginary[i][j] = 0;			
+		}
 	}
 
-
-	if (ans.size <= 4) 
+	if (ans.size <= EXIT_SIZE) 
 	{
 		for (int i = 0; i < ans.size; i++)
 		{
@@ -95,9 +95,9 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 			{
 				for (int r = 0; r < ans.size; r++)
 				{
-					ans.real[i][j] = cm1.real[i][r] * cm2.real[r][j];
+					ans.real[i][j] += cm1.real[i][r] * cm2.real[r][j];
 					ans.real[i][j] += -1 * cm1.imaginary[i][r] * cm2.imaginary[r][j];
-					ans.imaginary[i][j] = cm1.real[i][r] * cm2.imaginary[r][j];
+					ans.imaginary[i][j] += cm1.real[i][r] * cm2.imaginary[r][j];
 					ans.imaginary[i][j] += cm1.imaginary[i][r] * cm2.real[r][j];
 				}
 			}
@@ -133,14 +133,14 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 					for (int l = 0; l < a[i][j].size; l++) {
 						a[i][j].real[k][l] = cm1.real[i * cm1.size / 2 + k][j * cm1.size / 2 + l];
 						b[i][j].real[k][l] = cm2.real[i * cm2.size / 2 + k][j * cm2.size / 2 + l];
+						a[i][j].imaginary[k][l] = cm1.imaginary[i * cm1.size / 2 + k][j * cm1.size / 2 + l];
+						b[i][j].imaginary[k][l] = cm2.imaginary[i * cm2.size / 2 + k][j * cm2.size / 2 + l];
 					}
 				}
 			}
 		}
 
-		ComplexMatrix s1 = Sum(a[0][0], a[1][1]);
-		ComplexMatrix s2 = Sum(b[0][0], b[1][1]);
-		ComplexMatrix p1 = Multiply(s1, s2);
+		ComplexMatrix p1 = Multiply(Sum(a[0][0], a[1][1]), Sum(b[0][0], b[1][1]));
 		ComplexMatrix p2 = Multiply(Sum(a[1][0], a[1][1]), b[0][0]);
 		ComplexMatrix p3 = Multiply(a[0][0], Substract(b[0][1], b[1][1]));
 		ComplexMatrix p4 = Multiply(a[1][1], Substract(b[1][0], b[0][0]));
@@ -148,10 +148,10 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 		ComplexMatrix p6 = Multiply(Substract(a[1][0], a[0][0]), Sum(b[0][0], b[0][1]));
 		ComplexMatrix p7 = Multiply(Substract(a[0][1], a[1][1]), Sum(b[1][0], b[1][1]));
 
-		c[0][0] = Sum(Substract(Sum(p1, p4), p5), p7);
+		c[0][0] = Substract(Sum(Sum(p1, p4), p7), p5);
 		c[0][1] = Sum(p3, p5);
 		c[1][0] = Sum(p2, p4);
-		c[1][1] = Sum(Sum(Substract(p1, p2), p3), p6);
+		c[1][1] = Substract(Sum(Sum(p1, p3), p6), p2);
 
 		for (int i = 0; i < c[0][0].size; i++) {
 			for (int j = 0; j < c[0][0].size; j++) {
@@ -187,7 +187,7 @@ int main()
 		for (int j = 0; j < complexMatrix.size; j++)
 		{
 			complexMatrix.real[i][j] = i % CIRCLE1 + j % CIRCLE2;
-			complexMatrix.imaginary[i][j] = i % CIRCLE2 + j % CIRCLE1;
+			complexMatrix.imaginary[i][j] = /*i % CIRCLE2 + j % CIRCLE1*/0;
 		}
 	}
 
@@ -196,6 +196,7 @@ int main()
 
 	printf("result:\n");
 	printMatrix(Multiply(complexMatrix,complexMatrix));
-
+	//printMatrix(Sum(complexMatrix, complexMatrix));
+	//printMatrix(Substract(complexMatrix, complexMatrix));
 
 }
