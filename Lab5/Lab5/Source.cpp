@@ -1,4 +1,6 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
+#include "mpi.h"
 
 const int CIRCLE1 = 2;
 const int CIRCLE2 = 3;
@@ -7,8 +9,8 @@ const int EXIT_SIZE = 4;
 
 struct ComplexMatrix
 {
-	int** real;
-	int** imaginary;
+	int real[16][16];
+	int imaginary[16][16];
 	int size;
 };
 
@@ -27,18 +29,11 @@ ComplexMatrix Sum(ComplexMatrix cm1, ComplexMatrix cm2)
 {
 	struct ComplexMatrix ans;
 	ans.size = cm1.size;
-	ans.real = new int* [ans.size];
-	ans.imaginary = new int* [ans.size];
-	for (int i = 0; i < ans.size; i++) {
-		ans.real[i] = new int[ans.size];
-		ans.imaginary[i] = new int[ans.size];
-	}
 
 	for (int i = 0; i < ans.size; i++)
 	{
 		for (int j = 0; j < ans.size; j++)
 		{
-
 			ans.real[i][j] = cm1.real[i][j] + cm2.real[i][j];
 			ans.imaginary[i][j] = cm1.imaginary[i][j] + cm2.imaginary[i][j];
 		}
@@ -51,12 +46,6 @@ ComplexMatrix Substract(ComplexMatrix cm1, ComplexMatrix cm2)
 {
 	struct ComplexMatrix ans;
 	ans.size = cm1.size;
-	ans.real = new int* [ans.size];
-	ans.imaginary = new int* [ans.size];
-	for (int i = 0; i < ans.size; i++) {
-		ans.real[i] = new int[ans.size];
-		ans.imaginary[i] = new int[ans.size];
-	}
 
 	for (int i = 0; i < ans.size; i++)
 	{
@@ -75,11 +64,7 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 {
 	struct ComplexMatrix ans;
 	ans.size = cm1.size;
-	ans.real = new int*[ans.size];
-	ans.imaginary = new int*[ans.size];
 	for (int i = 0; i < ans.size; i++) {
-		ans.real[i] = new int[ans.size];
-		ans.imaginary[i] = new int[ans.size];
 		for (int j = 0; j < ans.size; j++)
 		{
 			ans.real[i][j] = 0;
@@ -115,21 +100,9 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 			c[i] = new ComplexMatrix[2];
 			for (int j = 0; j < 2; j++) {
 				a[i][j].size = cm1.size / 2;
-				a[i][j].real = new int* [a[i][j].size];
-				a[i][j].imaginary = new int* [a[i][j].size];
 				b[i][j].size = cm1.size / 2;
-				b[i][j].real = new int* [b[i][j].size];
-				b[i][j].imaginary = new int* [b[i][j].size];
 				c[i][j].size = cm1.size / 2;
-				c[i][j].real = new int* [c[i][j].size];
-				c[i][j].imaginary = new int* [c[i][j].size];
 				for (int k = 0; k < a[i][j].size; k++) {
-					a[i][j].real[k] = new int[a[i][j].size];
-					a[i][j].imaginary[k] = new int[a[i][j].size];
-					b[i][j].real[k] = new int[b[i][j].size];
-					b[i][j].imaginary[k] = new int[b[i][j].size];
-					c[i][j].real[k] = new int[c[i][j].size];
-					c[i][j].imaginary[k] = new int[c[i][j].size];
 					for (int l = 0; l < a[i][j].size; l++) {
 						a[i][j].real[k][l] = cm1.real[i * cm1.size / 2 + k][j * cm1.size / 2 + l];
 						b[i][j].real[k][l] = cm2.real[i * cm2.size / 2 + k][j * cm2.size / 2 + l];
@@ -171,32 +144,43 @@ ComplexMatrix Multiply(ComplexMatrix cm1, ComplexMatrix cm2)
 	
 };
 
-int main() 
+int main(int argc, char* argv[])
 {
+	MPI_Init(&argc, &argv);
+
+	MPI_Datatype MPI_COMPLEX_MATRIX;
+	MPI_Type_contiguous(257, MPI_INT, &MPI_COMPLEX_MATRIX);
+	MPI_Type_commit(&MPI_COMPLEX_MATRIX);
+
+	int ProcNum, ProcRank;
+	MPI_Status Status;
+	MPI_Comm_size(MPI_COMM_WORLD, &ProcNum);
+	MPI_Comm_rank(MPI_COMM_WORLD, &ProcRank);
+
 	ComplexMatrix complexMatrix;
 	complexMatrix.size = SIZE;
-	complexMatrix.real = new int*[complexMatrix.size];
-	complexMatrix.imaginary = new int*[complexMatrix.size];
-	for (int i = 0; i < complexMatrix.size; i++) {
-		complexMatrix.real[i] = new int[complexMatrix.size];
-		complexMatrix.imaginary[i] = new int[complexMatrix.size];
-	}
 
 	for (int i = 0; i < complexMatrix.size; i++)
 	{
 		for (int j = 0; j < complexMatrix.size; j++)
 		{
 			complexMatrix.real[i][j] = i % CIRCLE1 + j % CIRCLE2;
-			complexMatrix.imaginary[i][j] = /*i % CIRCLE2 + j % CIRCLE1*/0;
+			complexMatrix.imaginary[i][j] = i % CIRCLE2 + j % CIRCLE1;
 		}
 	}
 
-	printf("data:\n");
-	printMatrix(complexMatrix);
+	if (ProcRank == 0) {
+		printf("data:\n");
+		printMatrix(complexMatrix);
+		complexMatrix = Multiply(complexMatrix, complexMatrix);
+		MPI_Send(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 1, 0, MPI_COMM_WORLD);
+	}
+	else {
+		MPI_Recv(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 0, 0, MPI_COMM_WORLD, &Status);
+		printf("result:\n");
+		printMatrix(complexMatrix);
+	}
 
-	printf("result:\n");
-	printMatrix(Multiply(complexMatrix,complexMatrix));
-	//printMatrix(Sum(complexMatrix, complexMatrix));
-	//printMatrix(Substract(complexMatrix, complexMatrix));
-
+	MPI_Finalize();
+	return 0;
 }
