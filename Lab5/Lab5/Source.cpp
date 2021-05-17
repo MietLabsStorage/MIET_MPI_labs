@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
 	MPI_Init(&argc, &argv);
 
 	MPI_Datatype MPI_COMPLEX_MATRIX;
-	MPI_Type_contiguous(257, MPI_INT, &MPI_COMPLEX_MATRIX);
+	MPI_Type_contiguous(513, MPI_INT, &MPI_COMPLEX_MATRIX);
 	MPI_Type_commit(&MPI_COMPLEX_MATRIX);
 
 	int ProcNum, ProcRank;
