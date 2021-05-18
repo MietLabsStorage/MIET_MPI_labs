@@ -157,26 +157,43 @@ int main(int argc, char* argv[])
 	MPI_Comm_size(MPI_COMM_WORLD, &ProcNum);
 	MPI_Comm_rank(MPI_COMM_WORLD, &ProcRank);
 
+	MPI_Group WorldGr1;
+
+	MPI_Group ZeroToOne;
+	MPI_Comm ZtoComm;
+
+	MPI_Comm_group(MPI_COMM_WORLD, &WorldGr1);
+
+	int* ztoRank = new int[3]{ 0, 1, 2 };
+
+	MPI_Group_incl(WorldGr1, 3, ztoRank, &ZeroToOne);
+	MPI_Comm_create(MPI_COMM_WORLD, ZeroToOne, &ZtoComm);
+
 	ComplexMatrix complexMatrix;
 	complexMatrix.size = SIZE;
 
-	for (int i = 0; i < complexMatrix.size; i++)
-	{
-		for (int j = 0; j < complexMatrix.size; j++)
+	if (ProcRank == 0) {
+		for (int i = 0; i < complexMatrix.size; i++)
 		{
-			complexMatrix.real[i][j] = i % CIRCLE1 + j % CIRCLE2;
-			complexMatrix.imaginary[i][j] = i % CIRCLE2 + j % CIRCLE1;
+			for (int j = 0; j < complexMatrix.size; j++)
+			{
+				complexMatrix.real[i][j] = i % CIRCLE1 + j % CIRCLE2;
+				complexMatrix.imaginary[i][j] = i % CIRCLE2 + j % CIRCLE1;
+			}
 		}
+		MPI_Send(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 1, 1, ZtoComm);
 	}
 
-	if (ProcRank == 0) {
+	if (ProcRank == 1) {
+		MPI_Recv(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 0, 1, ZtoComm, &Status);
 		printf("data:\n");
 		printMatrix(complexMatrix);
 		complexMatrix = Multiply(complexMatrix, complexMatrix);
-		MPI_Send(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 1, 0, MPI_COMM_WORLD);
+		MPI_Send(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 2, 0, ZtoComm);
 	}
-	else {
-		MPI_Recv(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 0, 0, MPI_COMM_WORLD, &Status);
+
+	if(ProcRank == 2) {
+		MPI_Recv(&complexMatrix, 1, MPI_COMPLEX_MATRIX, 1, 0, ZtoComm, &Status);
 		printf("result:\n");
 		printMatrix(complexMatrix);
 	}
