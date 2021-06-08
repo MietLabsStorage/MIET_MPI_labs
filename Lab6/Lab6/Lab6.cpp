@@ -2,39 +2,34 @@
 #include <vector>
 #include <complex>
 #include <mpi.h>
+#include <windows.h>
 
 using namespace std;
 
 const double PI = acos(-1);
 
-void fft(vector<complex<double>>& a, bool invert) {
+void FFT(vector<complex<double>>& a, bool invert) {
 	int n = (int)a.size();
+	if (n == 1)  return;
 
-	for (int i = 1, j = 0; i < n; i++) {
-		int bit = n / 2;
-		for (; j >= bit; bit /= 2)
-			j -= bit;
-		j += bit;
-		if (i < j)
-			swap(a[i], a[j]);
+	vector<complex<double>> a0(n / 2), a1(n / 2);
+	for (int i = 0, j = 0; i < n; i += 2, j++) {
+		a0[j] = a[i];
+		a1[j] = a[i + 1];
 	}
+	FFT(a0, invert);
+	FFT(a1, invert);
 
-	for (int len = 2; len <= n; len *= 2) {
-		double ang = 2 * PI / len * (invert ? -1 : 1);
-		complex<double> wlen(cos(ang), sin(ang));
-		for (int i = 0; i < n; i += len) {
-			complex<double> w(1);
-			for (int j = 0; j < len / 2; ++j) {
-				complex<double> u = a[i + j], v = a[i + j + len / 2] * w;
-				a[i + j] = u + v;
-				a[i + j + len / 2] = u - v;
-				w *= wlen;
-			}
-		}
+	double ang = 2 * PI / n * (invert ? -1 : 1);
+	complex<double> w(1);
+	complex<double> wn(cos(ang), sin(ang));
+	for (int i = 0; i < n / 2; i++) {
+		a[i] = a0[i] + w * a1[i];
+		a[i + n / 2] = a0[i] - w * a1[i];
+		if (invert)
+			a[i] /= 2, a[i + n / 2] /= 2;
+		w *= wn;
 	}
-	if (invert)
-		for (int i = 0; i < n; ++i)
-			a[i] /= n;
 }
 
 void multiply(vector<int> a, vector<int> b, vector<int>& c) {
@@ -55,15 +50,15 @@ void multiply(vector<int> a, vector<int> b, vector<int>& c) {
 		fb.emplace(fb.begin(), complex<double>(0, 0));
 	}
 
-	fft(fa, false);
-	fft(fb, false);
+	FFT(fa, false);
+	FFT(fb, false);
 
 	for (int i = 0; i < n; i++)
 	{
 		fa[i] *= fb[i];
 	}
 
-	fft(fa, true);
+	FFT(fa, true);
 
 	c.resize(n, 0);
 
@@ -79,14 +74,6 @@ void multiply(vector<int> a, vector<int> b, vector<int>& c) {
 		}
 	}
 
-}
-
-void copyNumbers(int* left, int* right, int size)
-{
-	for (int i = 0; i < size; i++)
-	{
-		left[i] = right[i];
-	}
 }
 
 int main(int* argc, char** argv) {
@@ -124,15 +111,15 @@ int main(int* argc, char** argv) {
 	{
 		vector<int> A_vector = { 1, ProcRank };
 		vector<int> B_vector = { ProcRank, 1 };
-		vector<int> Z_vector;
+		vector<int> C_vector;
 
-		multiply(A_vector, B_vector, Z_vector);
+		multiply(A_vector, B_vector, C_vector);
 
-		for (vector<int>::iterator i = Z_vector.begin(); i != Z_vector.end(); ++i) {
+		for (vector<int>::iterator i = C_vector.begin(); i != C_vector.end(); ++i) {
 			printf("%d ", *i);
 		}
 
-		MPI_Send(Z_vector.data(), 1, MPI_LONGINT, neighbours[0], ProcRank, GRAPH_COMM);
+		MPI_Send(C_vector.data(), 1, MPI_LONGINT, neighbours[0], ProcRank, GRAPH_COMM);
 	}
 
 	if (neighbours_count == 3)
@@ -152,19 +139,17 @@ int main(int* argc, char** argv) {
 
 		vector<int> A_vector(A, A + long_num_size);
 		vector<int> B_vector(B, B + long_num_size);
-		vector<int> Z_vector(long_num_size*2,0);
+		vector<int> C_vector(long_num_size*2,0);
 
-		multiply(A_vector, B_vector, Z_vector);
+		multiply(A_vector, B_vector, C_vector);
 
-		for (vector<int>::iterator i = Z_vector.begin(); i != Z_vector.end(); ++i) {
+		for (vector<int>::iterator i = C_vector.begin(); i != C_vector.end(); ++i) {
 			printf("%d ", *i);
 		}
 
-		MPI_Send(Z_vector.data(), 1, MPI_LONGINT, neighbours[2], ProcRank, GRAPH_COMM);
-		MPI_Send(Z_vector.data(), 1, MPI_LONGINT, neighbours[2], ProcRank, GRAPH_COMM);
+		MPI_Send(C_vector.data(), 1, MPI_LONGINT, neighbours[2], ProcRank, GRAPH_COMM);
+		MPI_Send(C_vector.data(), 1, MPI_LONGINT, neighbours[2], ProcRank, GRAPH_COMM);
 	}
-
-	MPI_Barrier;
 
 	if (neighbours_count == 2)
 	{
@@ -177,11 +162,11 @@ int main(int* argc, char** argv) {
 
 		vector<int> A_vector(A, A + long_num_size);
 		vector<int> B_vector(B, B + long_num_size);
-		vector<int> Z_vector(long_num_size * 2, 0);
+		vector<int> C_vector(long_num_size * 2, 0);
 
-		multiply(A_vector, B_vector, Z_vector);
+		multiply(A_vector, B_vector, C_vector);
 
-		for (vector<int>::iterator i = Z_vector.begin(); i != Z_vector.end(); ++i) {
+		for (vector<int>::iterator i = C_vector.begin(); i != C_vector.end(); ++i) {
 			printf("%d ", *i);
 		}
 	}
